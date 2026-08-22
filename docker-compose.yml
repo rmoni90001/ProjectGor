@@ -1,0 +1,62 @@
+version: '3.8'
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=${SA_PASSWORD:-YourStrong@Passw0rd}
+    ports:
+      - "1433:1433"
+    volumes:
+      - ./database/entrypoint.sh:/entrypoint.sh
+      - ./database/schema.sql:/init/schema.sql
+      - ./database/seed.sql:/init/seed.sql
+    entrypoint: ["/bin/bash", "/entrypoint.sh"]
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P '${SA_PASSWORD:-YourStrong@Passw0rd}' -Q 'SELECT 1'"]
+      interval: 10s
+      retries: 5
+      start_period: 60s
+
+  gordon-api:
+    build: .
+    ports:
+      - "5000:80"
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-dummy}
+      - ConnectionStrings__Default=Server=sqlserver;Database=GordonDB;User=sa;Password=${SA_PASSWORD:-YourStrong@Passw0rd};TrustServerCertificate=True
+      - GOALERT_WEBHOOK_URL=${GOALERT_WEBHOOK_URL:-http://goalert:8080/integrations/generic-webhook/REPLACE_ME}
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+  n8n:
+    image: n8n/n8n
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-admin}
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-random32charstringhere}
+    volumes:
+      - n8n_data:/home/node/.n8n
+
+  metabase:
+    image: metabase/metabase:latest
+    ports:
+      - "3000:3000"
+    depends_on:
+      - sqlserver
+    environment:
+      - MB_DB_CONNECTION_URI=jdbc:sqlserver://sqlserver:1433;databaseName=metabase_appdb;encrypt=true;trustServerCertificate=true
+      - MB_DB_USER=sa
+      - MB_DB_PASS=${SA_PASSWORD:-YourStrong@Passw0rd}
+
+  goalert:
+    image: goalert/all-in-one-demo
+    ports:
+      - "8080:8080"
+
+volumes:
+  n8n_data:      
