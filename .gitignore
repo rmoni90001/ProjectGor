@@ -1,0 +1,41 @@
+## Rider
+.idea/
+*.sln.iml
+*.DotSettings.user
+
+## Visual Studio
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.sln.docstates
+
+## Visual Studio Code
+.vscode/
+*.code-workspace
+
+## Environment
+.env
+.env.local
+appsettings.local.json
+
+## Logs
+logs/
+*.log
+
+## Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+
+## NuGet
+.nuget/
+packages/
+
+## Docker
+.dockerignore
+
+## OS
+.DS_Store
+Thumbs.db
